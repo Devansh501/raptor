@@ -1,11 +1,10 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, BrowserView } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const zmq = require('zeromq');
 
 // --- Global Variables ---
 let mainWindow;
-let splashWindow;
 let pythonProcess;
 
 // ZeroMQ Sockets
@@ -37,36 +36,19 @@ async function setupZMQ() {
 }
 
 // --- 2. Window Creation ---
-function createSplashWindow() {
-    splashWindow = new BrowserWindow({
-        width: 1024,
-        height: 600,
-        transparent: false,
-        frame: false,
-        alwaysOnTop: true,
-        webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true
-        }
-    });
-
+function createWindow() {
+    // Define URLs
     const splashUrl = process.env.ELECTRON_START_URL 
         ? `${process.env.ELECTRON_START_URL}/splash.html` 
         : `file://${path.join(__dirname, '../dist/splash.html')}`;
 
-    splashWindow.loadURL(splashUrl);
-    
-    splashWindow.on('closed', () => {
-        splashWindow = null;
-    });
-}
-
-function createWindow() {
     const startUrl = process.env.ELECTRON_START_URL || `file://${path.join(__dirname, '../dist/index.html')}`;
 
     mainWindow = new BrowserWindow({
         width: 1024,
         height: 600,
+        fullscreen: true,
+        backgroundColor: '#ffffff', // Match splash background
         frame: false,
         autoHideMenuBar: true,
         show: false, // Don't show immediately
@@ -77,18 +59,52 @@ function createWindow() {
         }
     });
 
-    mainWindow.loadURL(startUrl);
+    // Create Splash Overlay
+    const splashView = new BrowserView({
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true
+        }
+    });
 
-    // Wait for the window to be ready to show
-    mainWindow.once('ready-to-show', () => {
+    mainWindow.setBrowserView(splashView);
+    splashView.webContents.loadURL(splashUrl);
+
+    // DEFERRED: Do NOT load Main App yet. Wait for splash to render.
+    // mainWindow.loadURL(startUrl); 
+
+    // Show window ONLY when splash title/content is ready
+    splashView.webContents.once('did-finish-load', () => {
+        const bounds = mainWindow.getBounds();
+        splashView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+        
+        // Small delay to ensure paint
         setTimeout(() => {
-            if (splashWindow) {
-                splashWindow.close();
-            }
-            if (mainWindow) {
-                mainWindow.show();
-            }
-        }, 3000); // 3 seconds splash
+            mainWindow.show();
+            
+            // NOW load the main app in background.
+            // This prevents CPU contention during the splash appearance.
+            mainWindow.loadURL(startUrl);
+
+            // Wait 3 seconds (from now) then remove splash
+            setTimeout(() => {
+                if (mainWindow) {
+                    mainWindow.setBrowserView(null);
+                }
+            }, 3000); 
+        }, 100);
+    });
+    
+    // Fallback: If splash fails to load for some reason, show window anyway after safe timeout?
+    // Not strictly needed in this controlled environment but good practice? 
+    // skipping distinct fallback to keep code clean as per user constraints.
+
+    // Keep splash resized if window changes (defensive, mainly for dev)
+    mainWindow.on('resize', () => {
+        if (mainWindow.getBrowserView() === splashView) {
+            const bounds = mainWindow.getBounds();
+            splashView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+        }
     });
 
     mainWindow.on('closed', () => {
@@ -137,7 +153,6 @@ app.commandLine.appendSwitch('touch-events', 'enabled');
 app.whenReady().then(() => {
     startPythonBackend(); 
     setupZMQ();           
-    createSplashWindow(); 
     createWindow();       
 });
 
@@ -157,7 +172,6 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-        createSplashWindow();
         createWindow();
     }
 });
