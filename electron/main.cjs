@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, BrowserView } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const zmq = require('zeromq');
@@ -37,20 +37,16 @@ async function setupZMQ() {
 
 // --- 2. Window Creation ---
 function createWindow() {
-    // Define URLs
-    const splashUrl = process.env.ELECTRON_START_URL 
-        ? `${process.env.ELECTRON_START_URL}/splash.html` 
-        : `file://${path.join(__dirname, '../dist/splash.html')}`;
-
     const startUrl = process.env.ELECTRON_START_URL || `file://${path.join(__dirname, '../dist/index.html')}`;
 
     mainWindow = new BrowserWindow({
         width: 1024,
         height: 600,
-        fullscreen: true,
-        backgroundColor: '#ffffff', // Match splash background
+        // fullscreen: true,
+        backgroundColor: '#000000', // Match new splash background
         frame: false,
         autoHideMenuBar: true,
+        titleBarStyle:'hidden',
         show: false, // Don't show immediately
         webPreferences: {
             nodeIntegration: false, 
@@ -59,52 +55,10 @@ function createWindow() {
         }
     });
 
-    // Create Splash Overlay
-    const splashView = new BrowserView({
-        webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true
-        }
-    });
+    mainWindow.loadURL(startUrl);
 
-    mainWindow.setBrowserView(splashView);
-    splashView.webContents.loadURL(splashUrl);
-
-    // DEFERRED: Do NOT load Main App yet. Wait for splash to render.
-    // mainWindow.loadURL(startUrl); 
-
-    // Show window ONLY when splash title/content is ready
-    splashView.webContents.once('did-finish-load', () => {
-        const bounds = mainWindow.getBounds();
-        splashView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
-        
-        // Small delay to ensure paint
-        setTimeout(() => {
-            mainWindow.show();
-            
-            // NOW load the main app in background.
-            // This prevents CPU contention during the splash appearance.
-            mainWindow.loadURL(startUrl);
-
-            // Wait 3 seconds (from now) then remove splash
-            setTimeout(() => {
-                if (mainWindow) {
-                    mainWindow.setBrowserView(null);
-                }
-            }, 3000); 
-        }, 100);
-    });
-    
-    // Fallback: If splash fails to load for some reason, show window anyway after safe timeout?
-    // Not strictly needed in this controlled environment but good practice? 
-    // skipping distinct fallback to keep code clean as per user constraints.
-
-    // Keep splash resized if window changes (defensive, mainly for dev)
-    mainWindow.on('resize', () => {
-        if (mainWindow.getBrowserView() === splashView) {
-            const bounds = mainWindow.getBounds();
-            splashView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
-        }
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show();
     });
 
     mainWindow.on('closed', () => {
