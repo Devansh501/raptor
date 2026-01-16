@@ -42,7 +42,8 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1024,
         height: 600,
-        // fullscreen: true,
+        fullscreen: true,
+        // kiosk: true, // Kiosk mode can be cleaner for embedded, using fullscreen for now as requested
         backgroundColor: '#000000', // Match new splash background
         frame: false,
         autoHideMenuBar: true,
@@ -103,6 +104,11 @@ function startPythonBackend() {
 // --- 5. App Lifecycle ---
 // Force enable touch events for Linux
 app.commandLine.appendSwitch('touch-events', 'enabled');
+// Wayland support for RPi
+if (process.platform === 'linux') {
+    app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform');
+    app.commandLine.appendSwitch('ozone-platform', 'wayland');
+}
 
 app.whenReady().then(() => {
     startPythonBackend(); 
