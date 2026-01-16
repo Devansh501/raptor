@@ -108,6 +108,7 @@ app.commandLine.appendSwitch('touch-events', 'enabled');
 if (process.platform === 'linux') {
     app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform');
     app.commandLine.appendSwitch('ozone-platform', 'wayland');
+    app.commandLine.appendSwitch('no-sandbox'); // Fix for SIGTRAP on some RPi envs
 }
 
 app.whenReady().then(() => {
