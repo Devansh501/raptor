@@ -14,11 +14,15 @@ import {
     Layers,
     FileText,
     Move,
-    Pause
+    Pause,
+    Droplets
 } from 'lucide-react';
 import { INITIAL_PROTOCOL_STATE, ProtocolStateManager } from '../utils/ProtocolState';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/Dialog';
 import { Input, Label, Select } from '../components/ui/Forms';
+import { LiquidManager } from '../components/LiquidManager';
+import { LiquidAssignmentModal } from '../components/LiquidAssignmentModal';
+import { TransferStepModal } from '../components/TransferStepModal';
 
 // --- SUB-COMPONENTS ---
 
@@ -64,7 +68,15 @@ const StepCard = ({ step, index, isSelected, onClick }) => {
 };
 
 // 2. Deck Slot (Interactive Grid Item)
-const DeckSlot = ({ slotId, labware, isActive, onClick }) => {
+const DeckSlot = ({ slotId, labware, isActive, onClick, liquidState, liquids }) => {
+    // Check if any wells have liquids assigned
+    const hasLiquids = liquidState && Object.keys(liquidState).length > 0;
+    
+    // Get unique liquid colors used in this labware
+    const uniqueColors = hasLiquids 
+        ? [...new Set(Object.values(liquidState).map(l => liquids[l.liquidId]?.color).filter(Boolean))]
+        : [];
+
     return (
         <div
             onClick={() => onClick(slotId)}
@@ -78,7 +90,17 @@ const DeckSlot = ({ slotId, labware, isActive, onClick }) => {
         >
             {labware ? (
                 // Occupied Slot View
-                <div className="w-full h-full bg-white rounded shadow-sm border border-slate-200 flex flex-col items-center justify-center p-1 text-center pointer-events-none">
+                <div className="w-full h-full bg-white rounded shadow-sm border border-slate-200 flex flex-col items-center justify-center p-1 text-center pointer-events-none relative overflow-hidden">
+                    {/* Liquid Indicator Overlay */}
+                    {hasLiquids && (
+                        <div className="absolute top-0 right-0 p-1 flex gap-0.5">
+                            {uniqueColors.slice(0, 3).map((color, i) => (
+                                <div key={i} className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                            ))}
+                            {uniqueColors.length > 3 && <div className="w-2 h-2 rounded-full bg-gray-300" />}
+                        </div>
+                    )}
+
                     <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-1 shrink-0">
                         {labware.type.includes('tip') ? <Layers size={14} /> : <FlaskConical size={14} />}
                     </div>
@@ -246,17 +268,22 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
     const [stateManager] = useState(new ProtocolStateManager(initialProtocol || INITIAL_PROTOCOL_STATE));
 
     // UI State
+    const [viewMode, setViewMode] = useState('deck'); // 'deck' or 'liquids'
     const [selectedStepId, setSelectedStepId] = useState(null); // 'deck_setup' or step ID
-    const [activeModal, setActiveModal] = useState(null); // 'step_config', 'labware_config'
-    const [editingSlot, setEditingSlot] = useState(null); // Valid when activeModal === 'labware_config'
+    const [activeModal, setActiveModal] = useState(null); // 'step_config', 'labware_config', 'liquid_assignment'
+    const [editingSlot, setEditingSlot] = useState(null); // Valid when activeModal === 'labware_config' or 'liquid_assignment'
+    const [selectedLiquidId, setSelectedLiquidId] = useState(null); // For LiquidManager
 
     // Initialize with a mock step if empty
     useEffect(() => {
-        if (!protocol.steps.find(s => s.type === 'initial_deck_setup')) {
+        setProtocol(prev => {
+            if (prev.steps.some(s => s.id === 'deck_setup')) {
+                return prev;
+            }
             const setupStep = { id: 'deck_setup', type: 'initial_deck_setup', title: 'Deck Setup', description: 'Configure initial labware layout' };
-            setProtocol(prev => ({ ...prev, steps: [setupStep, ...prev.steps] }));
-            setSelectedStepId('deck_setup');
-        }
+            return { ...prev, steps: [setupStep, ...prev.steps] };
+        });
+        setSelectedStepId(prev => prev || 'deck_setup');
     }, []);
 
     // --- Actions ---
@@ -291,7 +318,14 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
 
     const handleSlotClick = (slotId) => {
         setEditingSlot(slotId);
-        setActiveModal('labware_config');
+        if (viewMode === 'liquids') {
+            // Only if labware exists
+            if (protocol.labware && protocol.labware[slotId]) {
+                setActiveModal('liquid_assignment');
+            }
+        } else {
+            setActiveModal('labware_config');
+        }
     };
 
     const handleLabwareSet = (slot, def) => {
@@ -307,6 +341,34 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
         stateManager.state = newState;
         setActiveModal(null);
     }
+
+    // --- Liquid Actions ---
+
+    const handleAddLiquid = (liquid) => {
+        const newState = stateManager.addLiquid(liquid);
+        setProtocol(newState);
+        stateManager.state = newState;
+    };
+
+    const handleUpdateLiquid = (id, updates) => {
+        const newState = stateManager.updateLiquid(id, updates);
+        setProtocol(newState);
+        stateManager.state = newState;
+    };
+
+    const handleDeleteLiquid = (id) => {
+        const newState = stateManager.deleteLiquid(id);
+        setProtocol(newState);
+        stateManager.state = newState;
+        // If the selected liquid was deleted, deselect it
+        if (selectedLiquidId === id) setSelectedLiquidId(null);
+    };
+
+    const handleAssignLiquid = (labwareId, wells, liquidId, volume) => {
+        const newState = stateManager.assignLiquid(labwareId, wells, liquidId, volume);
+        setProtocol(newState);
+        stateManager.state = newState;
+    };
 
     // --- Render Helpers ---
 
@@ -335,6 +397,8 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
                                     key={id}
                                     slotId={id}
                                     labware={protocol.labware?.[id]}
+                                    liquidState={protocol.liquidState?.[id]}
+                                    liquids={protocol.liquids}
                                     onClick={handleSlotClick}
                                 />
                             ))}
@@ -374,60 +438,77 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
             {/* Main Workspace */}
             <div className="flex flex-1 overflow-hidden">
 
-                {/* 1. LEFT SIDEBAR (Timeline) */}
-                <div className="w-80 bg-white border-r border-slate-200 flex flex-col shadow-lg shadow-slate-200/50 z-10">
-                    <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Protocol Timeline</span>
-                        <span className="text-xs font-medium text-slate-400">{protocol.steps.length} Steps</span>
-                    </div>
+                {/* 1. LEFT SIDEBAR (Timeline or Liquids) */}
+                {viewMode === 'liquids' ? (
+                    <LiquidManager
+                        liquids={protocol.liquids}
+                        onAdd={handleAddLiquid}
+                        onUpdate={handleUpdateLiquid}
+                        onDelete={handleDeleteLiquid}
+                        onSelect={setSelectedLiquidId}
+                        selectedLiquidId={selectedLiquidId}
+                    />
+                ) : (
+                    <div className="w-80 bg-white border-r border-slate-200 flex flex-col shadow-lg shadow-slate-200/50 z-10">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Protocol Timeline</span>
+                            <span className="text-xs font-medium text-slate-400">{protocol.steps.length} Steps</span>
+                        </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-1">
-                        {protocol.steps.map((step, index) => (
-                            <StepCard
-                                key={step.id}
-                                step={step}
-                                index={index} // Note: deck_setup doesn't use index visually
-                                isSelected={selectedStepId === step.id}
-                                onClick={(s) => {
-                                    setSelectedStepId(s.id);
-                                    if (s.type !== 'initial_deck_setup') {
-                                        setActiveModal('step_config');
-                                    }
-                                }}
-                            />
-                        ))}
-                    </div>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                            {protocol.steps.map((step, index) => (
+                                <StepCard
+                                    key={step.id}
+                                    step={step}
+                                    index={index} // Note: deck_setup doesn't use index visually
+                                    isSelected={selectedStepId === step.id}
+                                    onClick={(s) => {
+                                        setSelectedStepId(s.id);
+                                        if (s.type !== 'initial_deck_setup') {
+                                            setActiveModal('step_config');
+                                        }
+                                    }}
+                                />
+                            ))}
+                        </div>
 
-                    {/* Add Step Toolbar */}
-                    <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-2 overflow-x-auto">
-                        <Button
-                            variant="outline"
-                            className="flex-1 gap-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-600"
-                            onClick={() => handleAddStep('transfer')}
-                        >
-                            <Move size={16} /> Transfer
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="flex-1 gap-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-600"
-                            onClick={() => handleAddStep('pause')}
-                        >
-                            <Pause size={16} /> Pause
-                        </Button>
-                        {/* More options... */}
+                        {/* Add Step Toolbar */}
+                        <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-2 overflow-x-auto">
+                            <Button
+                                variant="outline"
+                                className="flex-1 gap-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-600"
+                                onClick={() => handleAddStep('transfer')}
+                            >
+                                <Move size={16} /> Transfer
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="flex-1 gap-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 text-slate-600"
+                                onClick={() => handleAddStep('pause')}
+                            >
+                                <Pause size={16} /> Pause
+                            </Button>
+                            {/* More options... */}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* 2. MAIN STAGE (Deck Map) */}
                 <div className="flex-1 bg-slate-100/50 relative overflow-hidden flex flex-col">
-                    {/* View Toggle / Breadcrumbs (Optional) */}
+                    {/* View Toggle / Breadcrumbs */}
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur rounded-full border shadow-sm px-4 py-1.5 flex gap-4 text-sm font-medium text-slate-600 z-10">
-                        <span className="text-blue-600 flex items-center gap-1 cursor-pointer">
+                        <span 
+                            onClick={() => setViewMode('deck')}
+                            className={`flex items-center gap-1 cursor-pointer transition-colors ${viewMode === 'deck' ? 'text-blue-600' : 'hover:text-blue-600'}`}
+                        >
                             <GridIcon size={14} /> Deck View
                         </span>
                         <span className="text-slate-300">|</span>
-                        <span className="hover:text-blue-600 flex items-center gap-1 cursor-pointer transition-colors">
-                            <Layers size={14} /> Liquids
+                        <span 
+                            onClick={() => setViewMode('liquids')}
+                            className={`flex items-center gap-1 cursor-pointer transition-colors ${viewMode === 'liquids' ? 'text-blue-600' : 'hover:text-blue-600'}`}
+                        >
+                            <Droplets size={14} /> Liquids
                         </span>
                     </div>
 
@@ -439,14 +520,24 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
             </div>
 
             {/* --- MODALS --- */}
-
-            <StepConfigModal
-                open={activeModal === 'step_config'}
-                step={protocol.steps.find(s => s.id === selectedStepId)}
-                onClose={() => setActiveModal(null)}
-                onSave={handleUpdateStep}
-                onDelete={handleDeleteStep}
-            />
+            
+            {activeModal === 'step_config' && protocol.steps.find(s => s.id === selectedStepId)?.type === 'transfer' ? (
+                <TransferStepModal
+                    open={activeModal === 'step_config'}
+                    step={protocol.steps.find(s => s.id === selectedStepId)}
+                    labware={protocol.labware}
+                    onClose={() => setActiveModal(null)}
+                    onSave={handleUpdateStep}
+                />
+            ) : (
+                <StepConfigModal
+                    open={activeModal === 'step_config'}
+                    step={protocol.steps.find(s => s.id === selectedStepId)}
+                    onClose={() => setActiveModal(null)}
+                    onSave={handleUpdateStep}
+                    onDelete={handleDeleteStep}
+                />
+            )}
 
             <LabwareModal
                 open={activeModal === 'labware_config'}
@@ -455,6 +546,17 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
                 onClose={() => setActiveModal(null)}
                 onSave={handleLabwareSet}
                 onRemove={handleLabwareRemove}
+            />
+
+            <LiquidAssignmentModal
+                open={activeModal === 'liquid_assignment'}
+                labwareId={editingSlot}
+                labwareType={protocol.labware?.[editingSlot]?.name} // Pass name or type for display
+                currentAssignments={protocol.liquidState?.[editingSlot]}
+                liquids={protocol.liquids}
+                activeLiquidId={selectedLiquidId}
+                onClose={() => setActiveModal(null)}
+                onAssign={handleAssignLiquid}
             />
 
         </div>

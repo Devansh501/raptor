@@ -19,6 +19,7 @@ export const INITIAL_PROTOCOL_STATE = {
         // { id: 'step-1', type: 'initial_deck_setup', title: 'Initial Deck Setup', description: 'Place labware on deck' }
     ],
     liquids: {},
+    liquidState: {},
 };
 
 export class ProtocolStateManager {
@@ -73,6 +74,64 @@ export class ProtocolStateManager {
         return {
             ...this.state,
             labware: newLabware
+        };
+    }
+
+    // --- LIQUID MANAGEMENT ---
+
+    addLiquid(liquid) {
+        const id = liquid.id || `liquid-${Date.now()}`;
+        return {
+            ...this.state,
+            liquids: {
+                ...this.state.liquids,
+                [id]: { ...liquid, id }
+            }
+        };
+    }
+
+    updateLiquid(id, updates) {
+        return {
+            ...this.state,
+            liquids: {
+                ...this.state.liquids,
+                [id]: { ...this.state.liquids[id], ...updates }
+            }
+        };
+    }
+
+    deleteLiquid(id) {
+        const newLiquids = { ...this.state.liquids };
+        delete newLiquids[id];
+        // TODO: Clean up assignments?
+        return {
+            ...this.state,
+            liquids: newLiquids
+        };
+    }
+
+    assignLiquid(labwareId, wells, liquidId, volume) {
+        // We'll store assignments in a new 'liquidState' key or inside labware
+        // Let's use a separate liquidState keyed by labwareId
+        const currentLiquidState = this.state.liquidState || {};
+        const labwareLiquids = currentLiquidState[labwareId] || {};
+
+        const newLabwareLiquids = { ...labwareLiquids };
+        
+        wells.forEach(well => {
+            if (liquidId === null) {
+                 delete newLabwareLiquids[well];
+            } else {
+                newLabwareLiquids[well] = { liquidId, volume };
+            }
+        });
+
+        return {
+            ...this.state,
+            liquidState: {
+                ...currentLiquidState,
+                [labwareId]: newLabwareLiquids
+            }
         };
     }
 }
