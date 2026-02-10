@@ -42,7 +42,7 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1024,
         height: 600,
-        // fullscreen: true,
+        //fullscreen: true,
         // kiosk: true, // Kiosk mode can be cleaner for embedded, using fullscreen for now as requested
         backgroundColor: '#000000', // Match new splash background
         frame: false,

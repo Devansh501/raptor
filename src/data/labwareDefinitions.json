@@ -1,0 +1,86 @@
+[
+    {
+        "id": "nest_96_wellplate_100ul_pcr_full_skirt",
+        "name": "NEST 96 Well Plate 100 µL PCR Full Skirt",
+        "category": "Well Plate",
+        "company": "NEST",
+        "specifications": {
+            "rows": 8,
+            "columns": 12,
+            "wellCount": 96,
+            "maxVolume": 100
+        }
+    },
+    {
+        "id": "nest_96_wellplate_200ul_flat",
+        "name": "NEST 96 Well Plate 200 µL Flat",
+        "category": "Well Plate",
+        "company": "NEST",
+        "specifications": {
+            "rows": 8,
+            "columns": 12,
+            "wellCount": 96,
+            "maxVolume": 200
+        }
+    },
+    {
+        "id": "corning_96_wellplate_360ul_flat",
+        "name": "Corning 96 Well Plate 360 µL Flat",
+        "category": "Well Plate",
+        "company": "Corning",
+        "specifications": {
+            "rows": 8,
+            "columns": 12,
+            "wellCount": 96,
+            "maxVolume": 360
+        }
+    },
+    {
+        "id": "nest_12_reservoir_15ml",
+        "name": "NEST 12 Well Reservoir 15 mL",
+        "category": "Reservoir",
+        "company": "NEST",
+        "specifications": {
+            "rows": 1,
+            "columns": 12,
+            "wellCount": 12,
+            "maxVolume": 15000
+        }
+    },
+    {
+        "id": "usascientific_12_reservoir_22ml",
+        "name": "USA Scientific 12 Well Reservoir 22 mL",
+        "category": "Reservoir",
+        "company": "USA Scientific",
+        "specifications": {
+            "rows": 1,
+            "columns": 12,
+            "wellCount": 12,
+            "maxVolume": 22000
+        }
+    },
+    {
+        "id": "agilent_1_reservoir_290ml",
+        "name": "Agilent 1 Well Reservoir 290 mL",
+        "category": "Reservoir",
+        "company": "Agilent",
+        "specifications": {
+            "rows": 1,
+            "columns": 1,
+            "wellCount": 1,
+            "maxVolume": 290000
+        }
+    },
+    {
+        "id": "fixed_trash",
+        "name": "Fixed Trash",
+        "category": "Trash",
+        "company": "Opentrons",
+        "specifications": {
+            "rows": 1,
+            "columns": 1,
+            "wellCount": 1,
+            "maxVolume": 0
+        }
+    }
+]

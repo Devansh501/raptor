@@ -6,11 +6,11 @@ import { WellSelectionGrid, generateWells } from './WellSelectionGrid';
 
 const WELLS_96 = generateWells();
 
-export const TransferStepModal = ({ 
-    open, 
-    onClose, 
-    step, 
-    labware = {}, 
+export const TransferStepModal = ({
+    open,
+    onClose,
+    step,
+    labware = {},
     onSave,
 }) => {
     const [localParams, setLocalParams] = useState(() => {
@@ -72,16 +72,16 @@ export const TransferStepModal = ({
             const currentCount = prev[type].wells.length;
             const newWells = currentCount === WELLS_96.length ? [] : [...WELLS_96];
             return {
-                 ...prev,
-                 [type]: {
-                     ...prev[type],
-                     wells: newWells
-                 }
+                ...prev,
+                [type]: {
+                    ...prev[type],
+                    wells: newWells
+                }
             };
         });
     };
 
-    const currentLabwareList = Object.values(labware).filter(l => !l.type.includes('trash')); 
+    const currentLabwareList = Object.values(labware).filter(l => !l.type.includes('trash'));
 
     const renderWellSelection = (type) => {
         const selectedLabwareId = localParams[type].labwareId;
@@ -89,13 +89,14 @@ export const TransferStepModal = ({
         const selectedWells = new Set(localParams[type].wells);
 
         return (
-            <div className="flex flex-col h-full space-y-4">
-                <div className="flex items-end gap-4">
-                    <div className="flex-1 space-y-1">
-                        <Label>Select {type === 'source' ? 'Source' : 'Destination'} Labware</Label>
-                        <Select 
-                            value={selectedLabwareId || ''} 
+            <div className="flex flex-col h-full p-4 space-y-2">
+                <div className="flex items-end gap-6 border-b pb-2">
+                    <div className="flex-1 space-y-2">
+                        <Label className="text-slate-600">Select {type === 'source' ? 'Source' : 'Destination'} Labware</Label>
+                        <Select
+                            value={selectedLabwareId || ''}
                             onChange={(e) => handleLabwareChange(type, e.target.value)}
+                            className="w-full max-w-md"
                         >
                             <option value="" disabled>Select Labware...</option>
                             {currentLabwareList.map(l => (
@@ -104,8 +105,8 @@ export const TransferStepModal = ({
                         </Select>
                     </div>
                     {selectedLabwareId && (
-                        <div className="pb-1">
-                            <span className="text-xs font-medium text-slate-500">
+                        <div className="pb-2">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 {selectedWells.size} wells selected
                             </span>
                         </div>
@@ -113,20 +114,23 @@ export const TransferStepModal = ({
                 </div>
 
                 {selectedLabwareId ? (
-                   <div className="flex-1 border rounded-lg overflow-hidden flex flex-col">
-                       <WellSelectionGrid 
+                    <div className="flex-1 overflow-hidden flex flex-col relative">
+                        <WellSelectionGrid
                             selectedWells={selectedWells}
                             onWellClick={(w) => handleWellClick(type, w)}
-                       />
-                       <div className="p-2 bg-slate-50 border-t flex justify-between items-center">
-                            <Button variant="ghost" size="sm" onClick={() => handleSelectAll(type)}>
+                        />
+                        <div className="absolute top-2 right-2 z-10">
+                            <Button variant="secondary" size="sm" onClick={() => handleSelectAll(type)} className="shadow-sm bg-white/90 backdrop-blur">
                                 {selectedWells.size === WELLS_96.length ? 'Deselect All' : 'Select All'}
                             </Button>
-                       </div>
-                   </div>
+                        </div>
+                    </div>
                 ) : (
-                    <div className="flex-1 border-2 border-dashed rounded-lg flex items-center justify-center text-slate-400 bg-slate-50">
-                        Select a labware to view wells
+                    <div className="flex-1 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 bg-slate-50/50 gap-2">
+                        <div className="p-4 bg-slate-100 rounded-full">
+                            {/* <Layers size={24} />  Import Layers if needed or leave implicit */}
+                        </div>
+                        <span className="font-medium">Select a labware to view wells</span>
                     </div>
                 )}
             </div>
@@ -135,66 +139,87 @@ export const TransferStepModal = ({
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="max-w-[95vw] h-[90vh] flex flex-col p-0 overflow-hidden">
+            <DialogContent className="max-w-6xl h-[85vh] min-h-[600px] flex flex-col p-0 overflow-hidden bg-slate-50">
                 <DialogHeader className="px-6 py-4 border-b bg-white">
-                    <DialogTitle>Configure Transfer Step</DialogTitle>
+                    <DialogTitle className="text-xl font-bold text-slate-800">
+                        Configure Transfer Step
+                    </DialogTitle>
                 </DialogHeader>
 
                 <div className="flex flex-1 overflow-hidden">
                     {/* Sidebar Tabs */}
-                    <div className="w-48 bg-slate-50 border-r flex flex-col pt-4">
-                        <button 
-                            onClick={() => setActiveTab('source')}
-                            className={`px-6 py-3 text-left font-medium text-sm border-l-4 transition-colors ${activeTab === 'source' ? 'bg-white border-blue-500 text-blue-700' : 'border-transparent text-slate-600 hover:bg-slate-100'}`}
-                        >
-                            1. Source
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('dest')}
-                            className={`px-6 py-3 text-left font-medium text-sm border-l-4 transition-colors ${activeTab === 'dest' ? 'bg-white border-blue-500 text-blue-700' : 'border-transparent text-slate-600 hover:bg-slate-100'}`}
-                        >
-                            2. Destination
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('settings')}
-                            className={`px-6 py-3 text-left font-medium text-sm border-l-4 transition-colors ${activeTab === 'settings' ? 'bg-white border-blue-500 text-blue-700' : 'border-transparent text-slate-600 hover:bg-slate-100'}`}
-                        >
-                            3. Settings
-                        </button>
+                    <div className="w-64 bg-white border-r border-slate-200 flex flex-col p-4 gap-1">
+                        <Label className="px-3 py-2 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                            Steps
+                        </Label>
+                        {[
+                            { id: 'source', label: '1. Source' },
+                            { id: 'dest', label: '2. Destination' },
+                            { id: 'settings', label: '3. Settings' }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`
+                                    w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200
+                                    flex items-center justify-between
+                                    ${activeTab === tab.id
+                                        ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100'
+                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}
+                                `}
+                            >
+                                {tab.label}
+                                {activeTab === tab.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Content Area */}
-                    <div className="flex-1 p-6 overflow-hidden bg-white">
-                        {activeTab === 'source' && renderWellSelection('source')}
-                        {activeTab === 'dest' && renderWellSelection('dest')}
-                        
-                        {activeTab === 'settings' && (
-                            <div className="space-y-6 max-w-md">
-                                <div className="space-y-2">
-                                    <Label>Pipette</Label>
-                                    <Select 
-                                        value={localParams.pipette}
-                                        onChange={(e) => setLocalParams(p => ({ ...p, pipette: e.target.value }))}
-                                    >
-                                        <option value="left">Left Pipette</option>
-                                        <option value="right">Right Pipette</option>
-                                    </Select>
+                    <div className="flex-1 overflow-hidden bg-slate-50/50 flex flex-col">
+                        <div className="flex-1 overflow-hidden flex flex-col">
+                            {activeTab === 'source' && renderWellSelection('source')}
+                            {activeTab === 'dest' && renderWellSelection('dest')}
+
+                            {activeTab === 'settings' && (
+                                <div className="p-8 space-y-8 max-w-lg">
+                                    <div className="space-y-4">
+                                        <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Pipette Settings</h3>
+                                        <div className="space-y-2">
+                                            <Label>Pipette</Label>
+                                            <Select
+                                                value={localParams.pipette}
+                                                onChange={(e) => setLocalParams(p => ({ ...p, pipette: e.target.value }))}
+                                                className="w-full"
+                                            >
+                                                <option value="left">Left Pipette</option>
+                                                <option value="right">Right Pipette</option>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Transfer Parameters</h3>
+                                        <div className="space-y-2">
+                                            <Label>Transfer Volume (µL)</Label>
+                                            <Input
+                                                type="number"
+                                                value={localParams.volume}
+                                                onChange={(e) => setLocalParams(p => ({ ...p, volume: e.target.value }))}
+                                                className="w-full"
+                                            />
+                                            <p className="text-xs text-slate-500">
+                                                Volume to aspire from source and dispense to destination.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {/* Further settings like mix, touch tip, etc. */}
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Transfer Volume (µL)</Label>
-                                    <Input 
-                                        type="number"
-                                        value={localParams.volume}
-                                        onChange={(e) => setLocalParams(p => ({ ...p, volume: e.target.value }))}
-                                    />
-                                </div>
-                                {/* Further settings like mix, touch tip, etc. */}
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                <DialogFooter className="px-6 py-4 border-t bg-slate-50">
+                <DialogFooter className="px-6 py-4 border-t bg-white">
                     <Button variant="ghost" onClick={onClose}>Cancel</Button>
                     <Button onClick={() => {
                         onSave(step.id, { params: localParams });

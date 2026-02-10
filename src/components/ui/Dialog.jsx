@@ -18,7 +18,7 @@ export const Dialog = ({ open, onOpenChange, children }) => {
                 onClick={() => onOpenChange(false)}
             />
             {/* Content Wrapper - ensures centering */}
-            <div className="relative z-50 flex flex-col items-center justify-center w-full max-w-lg">
+            <div className="relative z-50 flex flex-col items-center justify-center w-full pointer-events-none">
                 {children}
             </div>
         </div>,
@@ -28,7 +28,7 @@ export const Dialog = ({ open, onOpenChange, children }) => {
 
 export const DialogContent = ({ children, className }) => (
     <div className={cn(
-        "grid w-full gap-4 border bg-white p-6 shadow-xl rounded-xl duration-200 animate-in fade-in-0 zoom-in-95",
+        "grid w-full gap-4 border bg-white p-6 shadow-xl rounded-xl duration-200 animate-in fade-in-0 zoom-in-95 pointer-events-auto",
         className
     )}>
         {children}

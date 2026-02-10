@@ -23,6 +23,7 @@ import { Input, Label, Select } from '../components/ui/Forms';
 import { LiquidManager } from '../components/LiquidManager';
 import { LiquidAssignmentModal } from '../components/LiquidAssignmentModal';
 import { TransferStepModal } from '../components/TransferStepModal';
+import { getLabwareDefinitions, getLabwareCategories, getLabwareByCategory } from '../utils/labwareUtils';
 
 // --- SUB-COMPONENTS ---
 
@@ -71,9 +72,9 @@ const StepCard = ({ step, index, isSelected, onClick }) => {
 const DeckSlot = ({ slotId, labware, isActive, onClick, liquidState, liquids }) => {
     // Check if any wells have liquids assigned
     const hasLiquids = liquidState && Object.keys(liquidState).length > 0;
-    
+
     // Get unique liquid colors used in this labware
-    const uniqueColors = hasLiquids 
+    const uniqueColors = hasLiquids
         ? [...new Set(Object.values(liquidState).map(l => liquids[l.liquidId]?.color).filter(Boolean))]
         : [];
 
@@ -102,13 +103,15 @@ const DeckSlot = ({ slotId, labware, isActive, onClick, liquidState, liquids }) 
                     )}
 
                     <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-1 shrink-0">
-                        {labware.type.includes('tip') ? <Layers size={14} /> : <FlaskConical size={14} />}
+                        {labware.type.includes('tip') ? <Layers size={14} /> :
+                            labware.type.includes('trash') ? <Trash2 size={14} /> :
+                                <FlaskConical size={14} />}
                     </div>
                     <span className="text-[10px] font-semibold text-slate-700 line-clamp-2 leading-tight">
                         {labware.name}
                     </span>
                     <span className="text-[9px] text-slate-400 mt-0.5 uppercase tracking-wider">
-                        {labware.type.split('-')[0]}
+                        {labware.category || labware.type}
                     </span>
                 </div>
             ) : (
@@ -211,45 +214,112 @@ const StepConfigModal = ({ step, open, onClose, onSave, onDelete }) => {
 };
 
 const LabwareModal = ({ slotId, currentLabware, open, onClose, onSave, onRemove }) => {
-    const LABWARE_OPTIONS = [
-        { type: 'tiprack-200ul', name: 'Opentrons 96 Tip Rack 300 µL' },
-        { type: 'plate-96-pcr', name: 'Nest 96 Loop Well Plate' },
-        { type: 'trough-12row', name: 'Nest 12 Well Reservoir 15 mL' },
-        { type: 'trash-box', name: 'Fixed Trash' },
-    ];
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const categories = getLabwareCategories();
 
+    // Set default category on open
+    useEffect(() => {
+        if (open && categories.length > 0 && !selectedCategory) {
+            setSelectedCategory(categories[0]);
+        }
+    }, [open, categories, selectedCategory]);
+
+    const displayedLabware = selectedCategory ? getLabwareByCategory(selectedCategory) : [];
     if (!slotId) return null;
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Configure Slot {slotId}</DialogTitle>
+            <DialogContent className="max-w-4xl min-h-[500px] flex flex-col p-0 overflow-hidden bg-slate-50">
+                <DialogHeader className="p-4 pb-3 border-b bg-white">
+                    <DialogTitle className="text-lg font-bold text-slate-800">
+                        Select Labware for <span className="text-blue-600">Slot {slotId}</span>
+                    </DialogTitle>
                 </DialogHeader>
 
-                <div className="grid grid-cols-1 gap-2 py-4">
-                    {LABWARE_OPTIONS.map(lw => (
-                        <div
-                            key={lw.type}
-                            onClick={() => onSave(slotId, lw)}
-                            className={`
-                                p-4 rounded-lg border cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors
-                                flex items-center gap-3
-                                ${currentLabware?.type === lw.type ? 'bg-blue-50 border-blue-500' : 'bg-white'}
-                            `}
-                        >
-                            <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
-                                <Layers size={16} className="text-gray-500" />
-                            </div>
-                            <span className="font-medium text-sm">{lw.name}</span>
+                <div className="flex flex-1 overflow-hidden">
+                    {/* Categories Sidebar */}
+                    <div className="w-56 bg-white border-r border-slate-200 flex flex-col p-3 gap-1 overflow-y-auto">
+                        <Label className="px-3 py-2 mb-1 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                            Categories
+                        </Label>
+                        {categories.map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setSelectedCategory(cat)}
+                                className={`
+                                    w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200
+                                    flex items-center justify-between
+                                    ${selectedCategory === cat
+                                        ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100'
+                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}
+                                `}
+                            >
+                                {cat}
+                                {selectedCategory === cat && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Labware List */}
+                    <div className="flex-1 overflow-y-auto bg-slate-50/50 p-4">
+                        <div className="grid grid-cols-2 gap-3">
+                            {displayedLabware.map(lw => (
+                                <div
+                                    key={lw.id}
+                                    onClick={() => onSave(slotId, { type: lw.id, name: lw.name, category: lw.category })}
+                                    className={`
+                                        group relative bg-white p-3 rounded-xl border transition-all duration-200 cursor-pointer
+                                        hover:shadow-md hover:-translate-y-0.5
+                                        ${currentLabware?.type === lw.id
+                                            ? 'border-blue-500 ring-1 ring-blue-500 shadow-md'
+                                            : 'border-slate-200 hover:border-blue-300 shadow-sm'}
+                                    `}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className={`
+                                            w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors
+                                            ${currentLabware?.type === lw.id ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-500'}
+                                        `}>
+                                            <Layers size={20} strokeWidth={1.5} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                                    {lw.company}
+                                                </span>
+                                                {currentLabware?.type === lw.id && (
+                                                    <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                                                        Selected
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <h4 className={`text-xs font-bold leading-tight mb-2 ${currentLabware?.type === lw.id ? 'text-blue-900' : 'text-slate-800'}`}>
+                                                {lw.name}
+                                            </h4>
+
+                                            {/* Specifications */}
+                                            <div className="flex flex-wrap gap-2">
+                                                <div className="flex flex-col px-2 py-0.5 bg-slate-50 rounded border border-slate-100 min-w-[50px]">
+                                                    <span className="text-[8px] text-slate-400 uppercase">Wells</span>
+                                                    <span className="text-[10px] font-semibold text-slate-700">{lw.specifications.wellCount}</span>
+                                                </div>
+                                                <div className="flex flex-col px-2 py-0.5 bg-slate-50 rounded border border-slate-100 min-w-[50px]">
+                                                    <span className="text-[8px] text-slate-400 uppercase">Max Vol</span>
+                                                    <span className="text-[10px] font-semibold text-slate-700">{lw.specifications.maxVolume} µL</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    ))}
+                    </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="p-4 border-t bg-white">
                     {currentLabware && (
-                        <Button variant="destructive" onClick={() => onRemove(slotId)} className="w-full">
-                            Remove Labware
+                        <Button variant="destructive" onClick={() => onRemove(slotId)}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Remove Labware
                         </Button>
                     )}
                     <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -497,14 +567,14 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
                 <div className="flex-1 bg-slate-100/50 relative overflow-hidden flex flex-col">
                     {/* View Toggle / Breadcrumbs */}
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur rounded-full border shadow-sm px-4 py-1.5 flex gap-4 text-sm font-medium text-slate-600 z-10">
-                        <span 
+                        <span
                             onClick={() => setViewMode('deck')}
                             className={`flex items-center gap-1 cursor-pointer transition-colors ${viewMode === 'deck' ? 'text-blue-600' : 'hover:text-blue-600'}`}
                         >
                             <GridIcon size={14} /> Deck View
                         </span>
                         <span className="text-slate-300">|</span>
-                        <span 
+                        <span
                             onClick={() => setViewMode('liquids')}
                             className={`flex items-center gap-1 cursor-pointer transition-colors ${viewMode === 'liquids' ? 'text-blue-600' : 'hover:text-blue-600'}`}
                         >
@@ -520,7 +590,7 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
             </div>
 
             {/* --- MODALS --- */}
-            
+
             {activeModal === 'step_config' && protocol.steps.find(s => s.id === selectedStepId)?.type === 'transfer' ? (
                 <TransferStepModal
                     open={activeModal === 'step_config'}
