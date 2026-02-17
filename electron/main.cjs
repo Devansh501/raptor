@@ -40,14 +40,14 @@ function createWindow() {
     const startUrl = process.env.ELECTRON_START_URL || `file://${path.join(__dirname, '../dist/index.html')}`;
 
     mainWindow = new BrowserWindow({
-        width: 1024,
-        height: 600,
-        //fullscreen: true,
+        width: 1920,
+        height: 1080,
+        // fullscreen: true,
         // kiosk: true, // Kiosk mode can be cleaner for embedded, using fullscreen for now as requested
         backgroundColor: '#000000', // Match new splash background
-        frame: false,
-        autoHideMenuBar: true,
-        titleBarStyle:'hidden',
+        // frame: false,
+        // autoHideMenuBar: true,
+        // titleBarStyle:'hidden',
         show: false, // Don't show immediately
         webPreferences: {
             nodeIntegration: false, 

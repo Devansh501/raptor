@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
+import { LabLoader } from '../components/ui/LabLoader';
 import { Separator } from '../components/ui/Layout';
 import {
     ArrowLeft,
@@ -15,7 +16,8 @@ import {
     FileText,
     Move,
     Pause,
-    Droplets
+    Droplets,
+    Loader2
 } from 'lucide-react';
 import { INITIAL_PROTOCOL_STATE, ProtocolStateManager } from '../utils/ProtocolState';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/Dialog';
@@ -343,6 +345,7 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
     const [activeModal, setActiveModal] = useState(null); // 'step_config', 'labware_config', 'liquid_assignment'
     const [editingSlot, setEditingSlot] = useState(null); // Valid when activeModal === 'labware_config' or 'liquid_assignment'
     const [selectedLiquidId, setSelectedLiquidId] = useState(null); // For LiquidManager
+    const [isRunning, setIsRunning] = useState(false);
 
     // Initialize with a mock step if empty
     useEffect(() => {
@@ -440,6 +443,13 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
         stateManager.state = newState;
     };
 
+    const handleRunProtocol = () => {
+        setIsRunning(true);
+        setTimeout(() => {
+            setIsRunning(false);
+        }, 100000);
+    };
+
     // --- Render Helpers ---
 
     const renderDeck = () => {
@@ -499,7 +509,7 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
                     <Button variant="outline" className="gap-2">
                         <FileText size={16} /> Protocol File
                     </Button>
-                    <Button className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200">
+                    <Button className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200" onClick={handleRunProtocol}>
                         <Play size={16} fill="currentColor" /> Run Protocol
                     </Button>
                 </div>
@@ -628,6 +638,17 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
                 onClose={() => setActiveModal(null)}
                 onAssign={handleAssignLiquid}
             />
+
+            {/* Run Protocol Loader Modal */}
+            <Dialog open={isRunning} onOpenChange={() => { }}>
+                <DialogContent className="max-w-sm flex flex-col items-center justify-center p-8 text-center space-y-6 bg-white/95 backdrop-blur">
+                    <LabLoader />
+                    <div>
+                        <DialogTitle className="text-xl font-bold text-slate-800 mb-2">Running Protocol...</DialogTitle>
+                        <p className="text-sm text-slate-500">Please wait while the robot executes your protocol. Do not open the door.</p>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
         </div>
     );
