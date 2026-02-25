@@ -25,7 +25,7 @@ import { Input, Label, Select } from '../components/ui/Forms';
 import { LiquidManager } from '../components/LiquidManager';
 import { LiquidAssignmentModal } from '../components/LiquidAssignmentModal';
 import { TransferStepModal } from '../components/TransferStepModal';
-import { getLabwareDefinitions, getLabwareCategories, getLabwareByCategory } from '../utils/labwareUtils';
+import { getLabwareDefinitions, getLabwareCategories, getLabwareByCategory, getLabwareDefinitionById } from '../utils/labwareUtils';
 
 // --- SUB-COMPONENTS ---
 
@@ -453,12 +453,7 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
     // --- Render Helpers ---
 
     const renderDeck = () => {
-        // Opentrons definition: 
-        // 12 slots. 
-        // Row 3 (Back): 10, 11, 12(Trash)
-        // Row 2: 7, 8, 9
-        // Row 1: 4, 5, 6
-        // Row 0 (Front): 1, 2, 3
+     
 
         const SLOTS = [
             ['10', '11', '12'],
@@ -631,7 +626,8 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
             <LiquidAssignmentModal
                 open={activeModal === 'liquid_assignment'}
                 labwareId={editingSlot}
-                labwareType={protocol.labware?.[editingSlot]?.name} // Pass name or type for display
+                labwareType={protocol.labware?.[editingSlot]?.name}
+                labwareDef={getLabwareDefinitionById(protocol.labware?.[editingSlot]?.type)}
                 currentAssignments={protocol.liquidState?.[editingSlot]}
                 liquids={protocol.liquids}
                 activeLiquidId={selectedLiquidId}

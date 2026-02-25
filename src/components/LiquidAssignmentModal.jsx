@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/Dialog';
 import { Button } from './ui/Button';
-import { WellSelectionGrid, generateWells } from './WellSelectionGrid';
+import { WellSelector, generateWells } from './WellSelectionGrid';
 
-const WELLS_96 = generateWells();
-
-export const LiquidAssignmentModal = ({ 
-    open, 
-    onClose, 
-    labwareId, 
-    labwareType, 
-    currentAssignments = {}, 
-    liquids = {}, 
-    activeLiquidId, 
-    onAssign 
+export const LiquidAssignmentModal = ({
+    open,
+    onClose,
+    labwareId,
+    labwareType,
+    labwareDef,
+    currentAssignments = {},
+    liquids = {},
+    activeLiquidId,
+    onAssign
 }) => {
     const [selectedWells, setSelectedWells] = useState(new Set());
-    
-    // Reset selection when modal opens
+
     useEffect(() => {
         if (open) setSelectedWells(new Set());
     }, [open]);
+
+    const allWells = generateWells(labwareDef);
 
     const handleWellClick = (wellId) => {
         const newSelection = new Set(selectedWells);
@@ -33,24 +33,23 @@ export const LiquidAssignmentModal = ({
     };
 
     const handleSelectAll = () => {
-        if (selectedWells.size === WELLS_96.length) {
+        if (selectedWells.size === allWells.length) {
             setSelectedWells(new Set());
         } else {
-            setSelectedWells(new Set(WELLS_96));
+            setSelectedWells(new Set(allWells));
         }
     };
 
     const handleApply = () => {
         if (!activeLiquidId) return;
-        // In a real app we'd ask for volume. For now assume full/standard volume or handle separate.
-        onAssign(labwareId, Array.from(selectedWells), activeLiquidId, 100); 
+        onAssign(labwareId, Array.from(selectedWells), activeLiquidId, 100);
         onClose();
     };
 
     const handleClear = () => {
-         onAssign(labwareId, Array.from(selectedWells), null, 0);
-         onClose();
-    }
+        onAssign(labwareId, Array.from(selectedWells), null, 0);
+        onClose();
+    };
 
     const activeLiquid = liquids[activeLiquidId];
 
@@ -63,7 +62,7 @@ export const LiquidAssignmentModal = ({
                         {activeLiquid ? (
                             <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full border">
                                 <span className="text-xs text-slate-500">Selected Liquid:</span>
-                                <div className="w-3 h-3 rounded-full" style={{backgroundColor: activeLiquid.color}}/>
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: activeLiquid.color }} />
                                 <span className="font-bold text-sm">{activeLiquid.name}</span>
                             </div>
                         ) : (
@@ -72,7 +71,8 @@ export const LiquidAssignmentModal = ({
                     </div>
                 </DialogHeader>
 
-                <WellSelectionGrid
+                <WellSelector
+                    labwareDef={labwareDef}
                     selectedWells={selectedWells}
                     onWellClick={handleWellClick}
                     currentAssignments={currentAssignments}
@@ -82,7 +82,7 @@ export const LiquidAssignmentModal = ({
                 <DialogFooter className="justify-between">
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={handleSelectAll}>
-                           {selectedWells.size === WELLS_96.length ? 'Deselect All' : 'Select All'}
+                            {selectedWells.size === allWells.length ? 'Deselect All' : 'Select All'}
                         </Button>
                     </div>
                     <div className="flex gap-2">

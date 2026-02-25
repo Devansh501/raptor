@@ -13,54 +13,62 @@ export function LandingScreen({ onCreateProtocol }) {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center p-6">
+        <div className="min-h-screen bg-slate-50 flex flex-col p-8 lg:p-12">
             {/* Header / Logo Area */}
-            <div className="mb-6 text-center">
-                <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Microlit Protocol Designer</h1>
-                <p className="text-gray-500 mt-1 text-sm">Create and manage your liquid handling protocols</p>
-            </div>
+            <header className="mb-8 mt-4 text-center">
+                <h1 className="text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">Microlit Protocol Designer</h1>
+                <p className="text-slate-500 mt-3 text-lg lg:text-xl max-w-2xl mx-auto">Create, simulate, and manage advanced liquid handling protocols</p>
+            </header>
 
-            {/* Main Action Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl">
-                {/* Create New */}
-                <Card
-                    className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-500 group"
-                    onClick={() => setIsWizardOpen(true)}
-                >
-                    <CardContent className="flex flex-col items-center justify-center h-48 p-6">
-                        <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
-                            <Plus className="h-6 w-6 text-blue-600 group-hover:text-white" />
-                        </div>
-                        <h2 className="text-lg font-semibold text-gray-800">Create New Protocol</h2>
-                        <p className="text-center text-sm text-gray-500 mt-2">Start a new protocol from scratch for your Microlit robot.</p>
-                    </CardContent>
-                </Card>
-
-                {/* Import */}
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-gray-400 group">
-                    <CardContent className="flex flex-col items-center justify-center h-48 p-6">
-                        <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-gray-600 transition-colors">
-                            <Upload className="h-6 w-6 text-gray-600 group-hover:text-white" />
-                        </div>
-                        <h2 className="text-lg font-semibold text-gray-800">Import Protocol</h2>
-                        <p className="text-center text-sm text-gray-500 mt-2">Import an existing JSON protocol file to edit.</p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Recent Protocols (Mock) */}
-            <div className="mt-12 w-full max-w-4xl">
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Recent Protocols</h3>
-                <div className="bg-white rounded-lg shadow-sm border divide-y">
-                    <div className="p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer">
-                        <div className="flex items-center gap-4">
-                            <FileText className="h-5 w-5 text-gray-400" />
-                            <div>
-                                <p className="font-medium text-gray-800">PCR_Prep_001.json</p>
-                                <p className="text-xs text-gray-400">Edited 2 hours ago</p>
+            {/* Main Content Area - Full screen flex */}
+            <div className="flex-1 flex flex-col items-center justify-center w-full max-w-5xl mx-auto pb-12">
+                {/* Main Action Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mb-16">
+                    {/* Create New */}
+                    <Card
+                        className="cursor-pointer hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-blue-500 group transform hover:-translate-y-2 bg-white shadow-lg rounded-2xl overflow-hidden"
+                        onClick={() => setIsWizardOpen(true)}
+                    >
+                        <CardContent className="flex flex-col items-center justify-center h-72 md:h-80 p-8">
+                            <div className="h-20 w-20 md:h-24 md:w-24 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-600 group-hover:scale-110 transition-all duration-300 shadow-sm">
+                                <Plus className="h-10 w-10 md:h-12 md:w-12 text-blue-600 group-hover:text-white transition-colors" />
                             </div>
+                            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-3">Create New Protocol</h2>
+                            <p className="text-center text-slate-500 text-base md:text-lg max-w-xs">Start a new protocol from scratch for your Microlit robot.</p>
+                        </CardContent>
+                    </Card>
+
+                    {/* Import */}
+                    <Card className="cursor-pointer hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-slate-800 group transform hover:-translate-y-2 bg-white shadow-lg rounded-2xl overflow-hidden">
+                        <CardContent className="flex flex-col items-center justify-center h-72 md:h-80 p-8">
+                            <div className="h-20 w-20 md:h-24 md:w-24 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-slate-800 group-hover:scale-110 transition-all duration-300 shadow-sm">
+                                <Upload className="h-10 w-10 md:h-12 md:w-12 text-slate-600 group-hover:text-white transition-colors" />
+                            </div>
+                            <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-3">Import Protocol</h2>
+                            <p className="text-center text-slate-500 text-base md:text-lg max-w-xs">Import an existing JSON protocol file to edit.</p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Recent Protocols */}
+                <div className="w-full">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Recent Protocols</h3>
+                        <Button variant="ghost" size="sm" className="text-blue-600 hover:bg-blue-50 font-semibold">View All</Button>
+                    </div>
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+                        <div className="p-5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group">
+                            <div className="flex items-center gap-5">
+                                <div className="p-4 bg-blue-50/50 rounded-xl group-hover:bg-blue-100 transition-colors">
+                                    <FileText className="h-7 w-7 text-blue-600" />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-slate-800 text-lg">PCR_Prep_001.json</p>
+                                    <p className="text-sm text-slate-500 mt-1">Edited 2 hours ago &bull; 96-Well Plate</p>
+                                </div>
+                            </div>
+                            <Button variant="secondary" className="opacity-0 group-hover:opacity-100 transition-opacity bg-white border shadow-sm hover:bg-slate-50">Open Designer</Button>
                         </div>
-                        <Button variant="ghost" size="sm">Open</Button>
                     </div>
                 </div>
             </div>
@@ -69,7 +77,7 @@ export function LandingScreen({ onCreateProtocol }) {
             <ProtocolWizard
                 open={isWizardOpen}
                 onOpenChange={setIsWizardOpen}
-                onComplete={handleCreateWrapper} // We'll add this prop to Wizard
+                onComplete={handleCreateWrapper}
             />
         </div>
     );

@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/Dialog';
 import { Button } from './ui/Button';
 import { Input, Label, Select } from './ui/Forms';
-import { WellSelectionGrid, generateWells } from './WellSelectionGrid';
-
-const WELLS_96 = generateWells();
+import { WellSelector, generateWells } from './WellSelectionGrid';
+import { getLabwareDefinitionById } from '../utils/labwareUtils';
 
 export const TransferStepModal = ({
     open,
@@ -23,21 +22,20 @@ export const TransferStepModal = ({
         return { ...defaults, ...step?.params };
     });
 
-    const [activeTab, setActiveTab] = useState('source'); // 'source', 'dest', 'settings'
+    const [activeTab, setActiveTab] = useState('source');
 
     useEffect(() => {
         if (open && step) {
-            setLocalParams(prev => ({
+            setLocalParams({
                 pipette: step.params?.pipette || 'left',
                 volume: step.params?.volume || 50,
                 source: step.params?.source || { labwareId: null, wells: [] },
                 dest: step.params?.dest || { labwareId: null, wells: [] },
                 ...step.params
-            }));
+            });
         }
     }, [open, step]);
 
-    // Helpers
     const handleWellClick = (type, wellId) => {
         setLocalParams(prev => {
             const currentWells = new Set(prev[type].wells);
@@ -46,38 +44,21 @@ export const TransferStepModal = ({
             } else {
                 currentWells.add(wellId);
             }
-            return {
-                ...prev,
-                [type]: {
-                    ...prev[type],
-                    wells: Array.from(currentWells)
-                }
-            };
+            return { ...prev, [type]: { ...prev[type], wells: Array.from(currentWells) } };
         });
     };
 
     const handleLabwareChange = (type, labwareId) => {
         setLocalParams(prev => ({
             ...prev,
-            [type]: {
-                ...prev[type],
-                labwareId,
-                wells: [] // Reset wells on labware change
-            }
+            [type]: { ...prev[type], labwareId, wells: [] }
         }));
     };
 
-    const handleSelectAll = (type) => {
+    const handleSelectAll = (type, allWells) => {
         setLocalParams(prev => {
-            const currentCount = prev[type].wells.length;
-            const newWells = currentCount === WELLS_96.length ? [] : [...WELLS_96];
-            return {
-                ...prev,
-                [type]: {
-                    ...prev[type],
-                    wells: newWells
-                }
-            };
+            const newWells = prev[type].wells.length === allWells.length ? [] : [...allWells];
+            return { ...prev, [type]: { ...prev[type], wells: newWells } };
         });
     };
 
@@ -85,8 +66,10 @@ export const TransferStepModal = ({
 
     const renderWellSelection = (type) => {
         const selectedLabwareId = localParams[type].labwareId;
-        const selectedLabware = labware[selectedLabwareId];
+        const selectedLabwareEntry = labware[selectedLabwareId];
+        const labwareDef = selectedLabwareEntry ? getLabwareDefinitionById(selectedLabwareEntry.type) : null;
         const selectedWells = new Set(localParams[type].wells);
+        const allWells = generateWells(labwareDef);
 
         return (
             <div className="flex flex-col h-full p-4 space-y-2">
@@ -107,7 +90,7 @@ export const TransferStepModal = ({
                     {selectedLabwareId && (
                         <div className="pb-2">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {selectedWells.size} wells selected
+                                {selectedWells.size} / {allWells.length} selected
                             </span>
                         </div>
                     )}
@@ -115,21 +98,25 @@ export const TransferStepModal = ({
 
                 {selectedLabwareId ? (
                     <div className="flex-1 overflow-hidden flex flex-col relative">
-                        <WellSelectionGrid
+                        <WellSelector
+                            labwareDef={labwareDef}
                             selectedWells={selectedWells}
                             onWellClick={(w) => handleWellClick(type, w)}
                         />
                         <div className="absolute top-2 right-2 z-10">
-                            <Button variant="secondary" size="sm" onClick={() => handleSelectAll(type)} className="shadow-sm bg-white/90 backdrop-blur">
-                                {selectedWells.size === WELLS_96.length ? 'Deselect All' : 'Select All'}
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleSelectAll(type, allWells)}
+                                className="shadow-sm bg-white/90 backdrop-blur"
+                            >
+                                {selectedWells.size === allWells.length ? 'Deselect All' : 'Select All'}
                             </Button>
                         </div>
                     </div>
                 ) : (
                     <div className="flex-1 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 bg-slate-50/50 gap-2">
-                        <div className="p-4 bg-slate-100 rounded-full">
-                            {/* <Layers size={24} />  Import Layers if needed or leave implicit */}
-                        </div>
+                        <div className="p-4 bg-slate-100 rounded-full" />
                         <span className="font-medium">Select a labware to view wells</span>
                     </div>
                 )}
@@ -179,7 +166,6 @@ export const TransferStepModal = ({
                         <div className="flex-1 overflow-hidden flex flex-col">
                             {activeTab === 'source' && renderWellSelection('source')}
                             {activeTab === 'dest' && renderWellSelection('dest')}
-
                             {activeTab === 'settings' && (
                                 <div className="p-8 space-y-8 max-w-lg">
                                     <div className="space-y-4">
@@ -196,7 +182,6 @@ export const TransferStepModal = ({
                                             </Select>
                                         </div>
                                     </div>
-
                                     <div className="space-y-4">
                                         <h3 className="text-lg font-bold text-slate-800 border-b pb-2">Transfer Parameters</h3>
                                         <div className="space-y-2">
@@ -212,7 +197,6 @@ export const TransferStepModal = ({
                                             </p>
                                         </div>
                                     </div>
-                                    {/* Further settings like mix, touch tip, etc. */}
                                 </div>
                             )}
                         </div>
