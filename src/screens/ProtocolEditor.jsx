@@ -22,9 +22,10 @@ import {
 import { INITIAL_PROTOCOL_STATE, ProtocolStateManager } from '../utils/ProtocolState';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/Dialog';
 import { Input, Label, Select } from '../components/ui/Forms';
-import { LiquidManager } from '../components/LiquidManager';
+import { LiquidManager, LiquidFormModal } from '../components/LiquidManager';
 import { LiquidAssignmentModal } from '../components/LiquidAssignmentModal';
 import { TransferStepModal } from '../components/TransferStepModal';
+import { WellSelector, generateWells } from '../components/WellSelectionGrid';
 import { getLabwareDefinitions, getLabwareCategories, getLabwareByCategory, getLabwareDefinitionById } from '../utils/labwareUtils';
 
 // --- SUB-COMPONENTS ---
@@ -215,19 +216,198 @@ const StepConfigModal = ({ step, open, onClose, onSave, onDelete }) => {
     );
 };
 
-const LabwareModal = ({ slotId, currentLabware, open, onClose, onSave, onRemove }) => {
+const LabwareModal = ({ slotId, currentLabware, currentAssignments, open, onClose, onSave, onRemove, liquids = {}, onAddLiquid }) => {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const categories = getLabwareCategories();
 
-    // Set default category on open
+    const [step, setStep] = useState('select'); // 'select', 'assign'
+    const [stagedLabware, setStagedLabware] = useState(null);
+
+    const [selectedWells, setSelectedWells] = useState(new Set());
+    const [activeLiquidId, setActiveLiquidId] = useState(null);
+    const [volume, setVolume] = useState('');
+    const [volumeError, setVolumeError] = useState('');
+    const [localAssignments, setLocalAssignments] = useState({});
+
+    const [isLiquidFormOpen, setIsLiquidFormOpen] = useState(false);
+
+    // Set default state on open
     useEffect(() => {
-        if (open && categories.length > 0 && !selectedCategory) {
-            setSelectedCategory(categories[0]);
+        if (open) {
+            setStep('select');
+            setStagedLabware(currentLabware ? { type: currentLabware.type, name: currentLabware.name, category: currentLabware.category } : null);
+            setSelectedWells(new Set());
+            setVolume('');
+            setVolumeError('');
+            setLocalAssignments(currentAssignments || {});
+            setSelectedCategory(prev => prev || (categories.length > 0 ? categories[0] : null));
+            if (Object.keys(liquids).length > 0) {
+                setActiveLiquidId(Object.keys(liquids)[0]);
+            } else {
+                setActiveLiquidId(null);
+            }
         }
-    }, [open, categories, selectedCategory]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
+
+    useEffect(() => {
+        if (!activeLiquidId && Object.keys(liquids).length > 0) {
+            setActiveLiquidId(Object.keys(liquids)[Object.keys(liquids).length - 1]);
+        }
+    }, [liquids, activeLiquidId]);
 
     const displayedLabware = selectedCategory ? getLabwareByCategory(selectedCategory) : [];
     if (!slotId) return null;
+
+    const handleLabwareSelect = (lw) => {
+        const labwareData = { type: lw.id, name: lw.name, category: lw.category, obj: lw };
+        if (lw.category && lw.category.toLowerCase() !== 'trash' && !lw.category.toLowerCase().includes('tip')) {
+            setStagedLabware(labwareData);
+            if (!currentLabware || currentLabware.type !== lw.id) {
+                setLocalAssignments({}); // Clear if changing labware
+            }
+            setStep('assign');
+        } else {
+            onSave(slotId, labwareData, {});
+        }
+    };
+
+    const handleWellClick = (wellId) => {
+        const newSelection = new Set(selectedWells);
+        if (newSelection.has(wellId)) {
+            newSelection.delete(wellId);
+        } else {
+            newSelection.add(wellId);
+        }
+        setSelectedWells(newSelection);
+    };
+
+    const handleSelectAll = (labwareDef) => {
+        const allWells = generateWells(labwareDef);
+        if (selectedWells.size === allWells.length) {
+            setSelectedWells(new Set());
+        } else {
+            setSelectedWells(new Set(allWells));
+        }
+    };
+
+    const handleApplyWells = () => {
+        if (!activeLiquidId) return;
+        const vol = parseFloat(volume) || 0;
+        if (vol <= 0) {
+            setVolumeError("Volume must be > 0");
+            return;
+        }
+
+        const newAssignments = { ...localAssignments };
+        Array.from(selectedWells).forEach(well => {
+            newAssignments[well] = { liquidId: activeLiquidId, volume: vol };
+        });
+        setLocalAssignments(newAssignments);
+        setSelectedWells(new Set());
+    };
+
+    const handleClearWells = () => {
+        const newAssignments = { ...localAssignments };
+        Array.from(selectedWells).forEach(well => {
+            delete newAssignments[well];
+        });
+        setLocalAssignments(newAssignments);
+        setSelectedWells(new Set());
+    };
+
+    const handleFinish = () => {
+        onSave(slotId, stagedLabware, localAssignments);
+    };
+
+    if (step === 'assign') {
+        const labwareDef = getLabwareDefinitionById(stagedLabware.type);
+        const allWells = generateWells(labwareDef);
+        return (
+            <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+                <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden bg-slate-50">
+                    <DialogHeader className="p-4 py-3 border-b bg-white shrink-0">
+                        <div className="flex justify-between items-center mr-8">
+                            <div>
+                                <DialogTitle className="text-lg font-bold text-slate-800">
+                                    Setup <span className="text-blue-600">{stagedLabware.name}</span>
+                                </DialogTitle>
+                                <p className="text-sm text-slate-500">Slot {slotId}</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Select
+                                    value={activeLiquidId || ''}
+                                    onChange={e => setActiveLiquidId(e.target.value)}
+                                    className="w-48 h-8 font-medium bg-slate-50 border-slate-200"
+                                >
+                                    <option value="" disabled>Select Liquid</option>
+                                    {Object.values(liquids).map(l => (
+                                        <option key={l.id} value={l.id}>{l.name}</option>
+                                    ))}
+                                </Select>
+                                <Button variant="outline" size="sm" onClick={() => setIsLiquidFormOpen(true)}>
+                                    New Liquid
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <WellSelector
+                        labwareDef={labwareDef}
+                        selectedWells={selectedWells}
+                        onWellClick={handleWellClick}
+                        currentAssignments={localAssignments}
+                        liquids={liquids}
+                    />
+
+                    <div className="px-6 py-4 border-t flex items-center justify-between bg-slate-50 shrink-0">
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-3">
+                                <Label className="text-slate-600 font-medium whitespace-nowrap">Volume / well (µL):</Label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.1"
+                                    value={volume}
+                                    onChange={(e) => {
+                                        setVolume(e.target.value);
+                                        if (volumeError) setVolumeError('');
+                                    }}
+                                    className={`w-24 text-right bg-white ${volumeError ? 'border-red-500' : ''}`}
+                                    placeholder="e.g. 100"
+                                />
+                            </div>
+                            {volumeError && (
+                                <span className="text-xs text-red-500 ml-[134px]">{volumeError}</span>
+                            )}
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => handleSelectAll(labwareDef)}>
+                                {selectedWells.size === allWells.length ? 'Deselect All' : 'Select All'}
+                            </Button>
+                            <Button variant="destructive" onClick={handleClearWells} disabled={selectedWells.size === 0}>
+                                Clear Wells
+                            </Button>
+                            <Button onClick={handleApplyWells} disabled={!activeLiquidId || selectedWells.size === 0}>
+                                Assign Liquid
+                            </Button>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="p-4 border-t bg-white shrink-0 flex justify-between">
+                        <Button variant="ghost" onClick={() => setStep('select')}>Back to Labware</Button>
+                        <Button onClick={handleFinish} className="bg-blue-600 hover:bg-blue-700">Done Setting Up</Button>
+                    </DialogFooter>
+
+                    <LiquidFormModal
+                        open={isLiquidFormOpen}
+                        onClose={() => setIsLiquidFormOpen(false)}
+                        onSave={onAddLiquid}
+                    />
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -268,7 +448,7 @@ const LabwareModal = ({ slotId, currentLabware, open, onClose, onSave, onRemove 
                             {displayedLabware.map(lw => (
                                 <div
                                     key={lw.id}
-                                    onClick={() => onSave(slotId, { type: lw.id, name: lw.name, category: lw.category })}
+                                    onClick={() => handleLabwareSelect(lw)}
                                     className={`
                                         group relative bg-white p-3 rounded-xl border transition-all duration-200 cursor-pointer
                                         hover:shadow-md hover:-translate-y-0.5
@@ -401,10 +581,30 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
         }
     };
 
-    const handleLabwareSet = (slot, def) => {
-        const newState = stateManager.addLabware(slot, def);
-        setProtocol(newState);
+    const handleLabwareSet = (slot, def, initialAssignments = {}) => {
+        let newState = stateManager.addLabware(slot, def);
+
+        // completely clear existing liquidState for the slot first
+        const currentLiquidState = { ...(newState.liquidState || {}) };
+        delete currentLiquidState[slot];
+        newState = { ...newState, liquidState: currentLiquidState };
         stateManager.state = newState;
+
+        if (initialAssignments && Object.keys(initialAssignments).length > 0) {
+            const groups = {};
+            Object.entries(initialAssignments).forEach(([well, data]) => {
+                const key = `${data.liquidId}_${data.volume}`;
+                if (!groups[key]) groups[key] = { liquidId: data.liquidId, volume: data.volume, wells: [] };
+                groups[key].wells.push(well);
+            });
+
+            Object.values(groups).forEach(g => {
+                newState = stateManager.assignLiquid(slot, g.wells, g.liquidId, g.volume);
+                stateManager.state = newState;
+            });
+        }
+
+        setProtocol(newState);
         setActiveModal(null);
     };
 
@@ -453,7 +653,7 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
     // --- Render Helpers ---
 
     const renderDeck = () => {
-     
+
 
         const SLOTS = [
             ['10', '11', '12'],
@@ -618,9 +818,12 @@ export function ProtocolEditor({ protocol: initialProtocol, onBack }) {
                 open={activeModal === 'labware_config'}
                 slotId={editingSlot}
                 currentLabware={protocol.labware?.[editingSlot]}
+                currentAssignments={protocol.liquidState?.[editingSlot]}
+                liquids={protocol.liquids}
                 onClose={() => setActiveModal(null)}
                 onSave={handleLabwareSet}
                 onRemove={handleLabwareRemove}
+                onAddLiquid={handleAddLiquid}
             />
 
             <LiquidAssignmentModal

@@ -92,15 +92,7 @@ const Step2_Hardware = ({ formData, updateField }) => {
 const Step3_PipetteRack = ({ formData, updateField }) => {
     return (
         <div className="py-1 flex flex-col items-center">
-            {/* <div className="mb-4 text-center">
-                <h3 className="text-lg font-medium text-gray-900">Configure Pipette Rack</h3>
-                <p className="text-sm text-muted-foreground">
-                    {formData.pipetteChannels === 'multi'
-                        ? "Select columns for 8-Channel pipette."
-                        : "Select individual tips for Single Channel pipette."}
-                </p>
-            </div> */}
-
+          
             <PipetteRack
                 mode={formData.pipetteChannels}
                 value={formData.activeTips}
@@ -266,8 +258,8 @@ export function ProtocolWizard({ open, onOpenChange, onComplete }) {
                     <style>
                         {`
                         @keyframes slowBounceCloud {
-                            0%, 100% { transform: translateY(0) scale(1.02); }
-                            50% { transform: translateY(-10px) scale(0.98); }
+                            0%, 100% { transform: translateY(0); }
+                            50% { transform: translateY(-12px); }
                         }
                     `}
                     </style>
@@ -280,16 +272,18 @@ export function ProtocolWizard({ open, onOpenChange, onComplete }) {
                     <div className="relative w-full max-w-[800px] aspect-square flex items-center justify-center">
 
                         {/* Center Video (With SVG Mask) */}
-                        <div className="absolute z-20 w-[65%] sm:w-[75%] md:w-[85%] lg:w-[75%] 2xl:w-[85%] aspect-[3/2] bg-white drop-shadow-2xl flex items-center justify-center p-2"
+                        <div className="absolute z-20 w-[65%] sm:w-[70%] lg:w-[60%] 2xl:w-[55%] max-w-[500px] aspect-[3/2] drop-shadow-2xl flex items-center justify-center"
                             style={{
-                                animation: 'slowBounceCloud 6s ease-in-out infinite',
-                                clipPath: 'url(#cloud-mask)',
-                                background: 'white'
+                                animation: 'slowBounceCloud 6s ease-in-out infinite'
                             }}>
+                            {/* Inner white background mask that creates the border */}
+                            <div className="absolute inset-0 bg-white" style={{ clipPath: 'url(#cloud-mask)' }}></div>
+
+                            {/* Inner Video perfectly proportionally sized inside mask */}
                             <video
                                 src="/labProcess.mp4"
                                 autoPlay loop muted playsInline
-                                className="w-[105%] h-[105%] object-cover"
+                                className="relative z-10 w-[95%] h-[95%] object-cover scale-[1.03]"
                                 style={{
                                     clipPath: 'url(#cloud-mask)'
                                 }}

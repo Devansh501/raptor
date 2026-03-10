@@ -124,6 +124,27 @@ export const TransferStepModal = ({
         );
     };
 
+    const validateTransfer = () => {
+        const sourceWells = localParams.source.wells.length;
+        const destWells = localParams.dest.wells.length;
+
+        if (!localParams.source.labwareId || sourceWells === 0) {
+            return "Please select at least one source well.";
+        }
+        if (!localParams.dest.labwareId || destWells === 0) {
+            return "Please select at least one destination well.";
+        }
+        if (sourceWells !== 1 && destWells !== 1 && sourceWells !== destWells) {
+            return "Invalid well selection. Allowed combinations: 1-to-N, N-to-1, or N-to-N.";
+        }
+        if (!localParams.volume || isNaN(localParams.volume) || Number(localParams.volume) <= 0) {
+            return "Please enter a valid transfer volume (> 0).";
+        }
+        return null;
+    };
+
+    const validationError = validateTransfer();
+
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
             <DialogContent className="max-w-6xl h-[85vh] min-h-[600px] flex flex-col p-0 overflow-hidden bg-slate-50">
@@ -203,12 +224,28 @@ export const TransferStepModal = ({
                     </div>
                 </div>
 
-                <DialogFooter className="px-6 py-4 border-t bg-white">
-                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                    <Button onClick={() => {
-                        onSave(step.id, { params: localParams });
-                        onClose();
-                    }}>Save Step</Button>
+                <DialogFooter className="px-6 py-4 border-t bg-white flex justify-between items-center w-full">
+                    <div className="flex-1">
+                        {validationError && (
+                            <span className="text-sm font-medium text-red-600 bg-red-50 px-3 py-1.5 rounded-md border border-red-100">
+                                {validationError}
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                        <Button
+                            disabled={!!validationError}
+                            onClick={() => {
+                                if (!validationError) {
+                                    onSave(step.id, { params: localParams });
+                                    onClose();
+                                }
+                            }}
+                        >
+                            Save Step
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

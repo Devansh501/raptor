@@ -15,7 +15,7 @@ const COLORS = [
     '#14b8a6', // Teal
 ];
 
-const LiquidFormModal = ({ open, onClose, onSave, initialLiquid = null }) => {
+export const LiquidFormModal = ({ open, onClose, onSave, initialLiquid = null }) => {
     const [name, setName] = useState(initialLiquid?.name || '');
     const [color, setColor] = useState(initialLiquid?.color || COLORS[0]);
 
@@ -40,8 +40,8 @@ const LiquidFormModal = ({ open, onClose, onSave, initialLiquid = null }) => {
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
                         <Label>Liquid Name</Label>
-                        <Input 
-                            value={name} 
+                        <Input
+                            value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="e.g. Water, Buffer A"
                         />
@@ -98,10 +98,10 @@ export const LiquidManager = ({ liquids, onAdd, onUpdate, onDelete, onSelect, se
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {liquidList.length === 0 && (
                     <div className="text-center py-8 text-slate-400 text-sm">
-                        No liquids defined.<br/>Create one to start.
+                        No liquids defined.<br />Create one to start.
                     </div>
                 )}
-                
+
                 {liquidList.map(liquid => (
                     <div
                         key={liquid.id}
@@ -109,27 +109,27 @@ export const LiquidManager = ({ liquids, onAdd, onUpdate, onDelete, onSelect, se
                         className={`
                             group relative p-3 rounded-lg border-2 cursor-pointer transition-all
                             flex items-center gap-3
-                            ${selectedLiquidId === liquid.id 
-                                ? 'border-slate-800 bg-slate-50 shadow-sm' 
+                            ${selectedLiquidId === liquid.id
+                                ? 'border-slate-800 bg-slate-50 shadow-sm'
                                 : 'border-slate-100 hover:border-slate-200 bg-white'}
                         `}
                     >
-                        <div 
-                            className="w-4 h-10 rounded-full shrink-0" 
+                        <div
+                            className="w-4 h-10 rounded-full shrink-0"
                             style={{ backgroundColor: liquid.color }}
                         />
                         <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-slate-800 truncate">{liquid.name}</h4>
                         </div>
-                        
+
                         <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
+                            <button
                                 onClick={(e) => handleEdit(e, liquid)}
                                 className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded"
                             >
                                 <Edit2 size={14} />
                             </button>
-                            <button 
+                            <button
                                 onClick={(e) => { e.stopPropagation(); onDelete(liquid.id); }}
                                 className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded"
                             >
@@ -146,7 +146,7 @@ export const LiquidManager = ({ liquids, onAdd, onUpdate, onDelete, onSelect, se
                 </Button>
             </div>
 
-            <LiquidFormModal 
+            <LiquidFormModal
                 open={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onSave={(data) => {
